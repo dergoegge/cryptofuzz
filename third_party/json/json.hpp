@@ -8379,7 +8379,10 @@ scan_number_done:
         std::string result;
         for (const auto c : token_string)
         {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
             if ('\x00' <= c and c <= '\x1F')
+#pragma GCC diagnostic pop
             {
                 // escape control characters
                 std::array<char, 9> cs{{}};

@@ -131,7 +131,7 @@ end:
                                 CheckRet(secp256k1_context_randomize(ctx, seed.data())) == 1,
                                 "Call to secp256k1_context_randomize failed");
                     }
-                } catch ( fuzzing::datasource::Datasource::OutOfData ) { }
+                } catch ( fuzzing::datasource::Datasource::OutOfData& ) { }
 #endif
             }
 
@@ -162,7 +162,7 @@ end:
                     if ( ds.Get<bool>() ) {
                         clone();
                     }
-                } catch ( fuzzing::datasource::Datasource::OutOfData ) { }
+                } catch ( fuzzing::datasource::Datasource::OutOfData& ) { }
 
                 return ctx;
             }
@@ -226,7 +226,7 @@ end:
                         if ( ds.Get<bool>() ) {
                             convert();
                         }
-                    } catch ( fuzzing::datasource::Datasource::OutOfData ) { }
+                    } catch ( fuzzing::datasource::Datasource::OutOfData& ) { }
                 }
                 return sig;
             }
@@ -299,7 +299,7 @@ end:
                             }
                         }
                     }
-                } catch ( fuzzing::datasource::Datasource::OutOfData ) { }
+                } catch ( fuzzing::datasource::Datasource::OutOfData& ) { }
 
                 if ( original_size > 0 ) {
                     util::free(data);
@@ -326,7 +326,7 @@ end:
                         if ( ds.Get<bool>() ) {
                             serialize();
                         }
-                    } catch ( fuzzing::datasource::Datasource::OutOfData ) { }
+                    } catch ( fuzzing::datasource::Datasource::OutOfData& ) { }
                 }
                 return pub;
             }
@@ -473,7 +473,7 @@ end:
                         if ( ds.Get<bool>() ) {
                             serializeCompact();
                         }
-                    } catch ( fuzzing::datasource::Datasource::OutOfData ) { }
+                    } catch ( fuzzing::datasource::Datasource::OutOfData& ) { }
                 }
                 return sig;
             }
