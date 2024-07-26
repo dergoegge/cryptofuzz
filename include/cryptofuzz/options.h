@@ -35,6 +35,7 @@ class Options {
         bool disableTests = false;
         bool noDecrypt = false;
         bool noCompare = false;
+        uint8_t *characterization_shmem = nullptr;
 };
 
 } /* namespace cryptofuzz */

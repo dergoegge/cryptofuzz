@@ -4,6 +4,8 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <sys/shm.h>
+#include <unistd.h>
 #include <cryptofuzz/options.h>
 #include <fuzzing/datasource/id.hpp>
 #include "repository_tbl.h"
@@ -462,7 +464,17 @@ static void setOptions(int argc, char** argv) {
     );
     boost::split(extraArguments, cmdline, boost::is_any_of(" "));
 
-    const cryptofuzz::Options options(argc, argv, extraArguments);
+    cryptofuzz::Options options(argc, argv, extraArguments);
+
+    if (const char *shmem_id =
+            std::getenv("SEMSAN_CHARACTERIZATION_SHMEM_ID")) {
+      options.characterization_shmem =
+          (uint8_t *)shmat(std::stoi(shmem_id), NULL, 0);
+      assert(options.characterization_shmem);
+      memset(options.characterization_shmem, 0, 32);
+    } else {
+      options.characterization_shmem = nullptr;
+    }
 
     driver = std::make_shared<cryptofuzz::Driver>(options);
     cryptofuzz_options = driver->GetOptionsPtr();

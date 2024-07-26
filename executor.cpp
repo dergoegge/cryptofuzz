@@ -3,6 +3,7 @@
 #include "mutatorpool.h"
 #include "config.h"
 #include <cryptofuzz/util.h>
+#include <cryptofuzz/crypto.h>
 #include <fuzzing/memory.hpp>
 #include <algorithm>
 #include <set>
@@ -2486,6 +2487,34 @@ bool ExecutorBase<component::MAC, operation::HMAC>::dontCompare(const operation:
 
 template <class ResultType, class OperationType>
 void ExecutorBase<ResultType, OperationType>::compare(const std::vector< std::pair<std::shared_ptr<Module>, OperationType> >& operations, const ResultSet& results, const uint8_t* data, const size_t size) const {
+    if (options.characterization_shmem != nullptr && !operations.empty() &&
+        dontCompare(operations[0].second) == false) {
+        // Use the sha1 hash of all the result values as the characterization
+        // value.
+        Datasource out{nullptr, 0};
+        for (auto res : results) {
+            if (const std::optional<ResultType> value = res.second) {
+                if constexpr (std::is_same_v<ResultType, bool>) {
+                        out.Put<bool>(*value);
+                } else if constexpr (std::is_same_v<
+                                         ResultType,
+                                         std::array<cryptofuzz::Buffer, 3>>) {
+                        (*value)[0].Serialize(out);
+                        (*value)[1].Serialize(out);
+                        (*value)[2].Serialize(out);
+                } else {
+                        value->Serialize(out);
+                }
+            }
+        }
+
+        std::vector<uint8_t> output = out.GetOut();
+        auto hash = crypto::sha1(output);
+        assert(hash.size() <= 32);
+        memcpy(options.characterization_shmem, hash.data(), hash.size());
+        return;
+    }
+
     if ( results.size() < 2 ) {
         /* Nothing to compare. Don't even bother filtering. */
         return;
