@@ -48,6 +48,87 @@ extern "C" {
     cryptofuzz_longjmp_triggered = 0; \
 } while(0); \
 
+// Macro to set each element in the tuple explicitly
+#define ORDERED_EVAL_IMPL(tuple, index, arg) std::get<index>(tuple) = arg;
+
+#define GET_MACRO(_1, _2, _3, _4, _5, _6, _7, _8, NAME, ...) NAME
+
+// Helper macros to generate a sequence of tuple assignment operations
+#define ORDERED_EVAL_1(tuple, x1) ORDERED_EVAL_IMPL(tuple, 0, x1)
+#define ORDERED_EVAL_2(tuple, x1, x2)                                          \
+  ORDERED_EVAL_1(tuple, x1) ORDERED_EVAL_IMPL(tuple, 1, x2)
+#define ORDERED_EVAL_3(tuple, x1, x2, x3)                                      \
+  ORDERED_EVAL_2(tuple, x1, x2) ORDERED_EVAL_IMPL(tuple, 2, x3)
+#define ORDERED_EVAL_4(tuple, x1, x2, x3, x4)                                  \
+  ORDERED_EVAL_3(tuple, x1, x2, x3) ORDERED_EVAL_IMPL(tuple, 3, x4)
+#define ORDERED_EVAL_5(tuple, x1, x2, x3, x4, x5)                              \
+  ORDERED_EVAL_4(tuple, x1, x2, x3, x4) ORDERED_EVAL_IMPL(tuple, 4, x5)
+#define ORDERED_EVAL_6(tuple, x1, x2, x3, x4, x5, x6)                          \
+  ORDERED_EVAL_5(tuple, x1, x2, x3, x4, x5) ORDERED_EVAL_IMPL(tuple, 5, x6)
+#define ORDERED_EVAL_7(tuple, x1, x2, x3, x4, x5, x6, x7)                      \
+  ORDERED_EVAL_6(tuple, x1, x2, x3, x4, x5, x6) ORDERED_EVAL_IMPL(tuple, 6, x7)
+#define ORDERED_EVAL_8(tuple, x1, x2, x3, x4, x5, x6, x7, x8)                  \
+  ORDERED_EVAL_7(tuple, x1, x2, x3, x4, x5, x6, x7)                            \
+  ORDERED_EVAL_IMPL(tuple, 7, x8)
+#define ORDERED_EVAL_SELECT(...)                                               \
+  GET_MACRO(__VA_ARGS__, ORDERED_EVAL_8, ORDERED_EVAL_7, ORDERED_EVAL_6,       \
+            ORDERED_EVAL_5, ORDERED_EVAL_4, ORDERED_EVAL_3, ORDERED_EVAL_2,    \
+            ORDERED_EVAL_1)
+
+// Helper macros to generate a list of types from __VA_ARGS__
+#define TYPEOF_1(x1) decltype(x1)
+#define TYPEOF_2(x1, x2) decltype(x1), decltype(x2)
+#define TYPEOF_3(x1, x2, x3) decltype(x1), decltype(x2), decltype(x3)
+#define TYPEOF_4(x1, x2, x3, x4)                                               \
+  decltype(x1), decltype(x2), decltype(x3), decltype(x4)
+#define TYPEOF_5(x1, x2, x3, x4, x5)                                           \
+  decltype(x1), decltype(x2), decltype(x3), decltype(x4), decltype(x5)
+#define TYPEOF_6(x1, x2, x3, x4, x5, x6)                                       \
+  decltype(x1), decltype(x2), decltype(x3), decltype(x4), decltype(x5),        \
+      decltype(x6)
+#define TYPEOF_7(x1, x2, x3, x4, x5, x6, x7)                                   \
+  decltype(x1), decltype(x2), decltype(x3), decltype(x4), decltype(x5),        \
+      decltype(x6), decltype(x7)
+#define TYPEOF_8(x1, x2, x3, x4, x5, x6, x7, x8)                               \
+  decltype(x1), decltype(x2), decltype(x3), decltype(x4), decltype(x5),        \
+      decltype(x6), decltype(x7), decltype(x8)
+#define TYPEOF(...)                                                            \
+  GET_MACRO(__VA_ARGS__, TYPEOF_8, TYPEOF_7, TYPEOF_6, TYPEOF_5, TYPEOF_4,     \
+            TYPEOF_3, TYPEOF_2, TYPEOF_1)                                      \
+  (__VA_ARGS__)
+
+// Return a tuple containing the evaluated arguments passed to the macro. This
+// macro gurantees that the arguments are evaluated from left to right.
+//
+// Example:
+//
+// ```c++
+// auto f = [](int a, int b, int c) { return a - b * c; };
+// auto get = [] { static int i = 0; return ++i;};
+// std::apply(f, CF_ORDERED_EVAL(get(), get(), get()));
+// ```
+//
+// Calling `f(get(), get(), get())` directly would result in the evaluation
+// order of the `get()` calls being undefined, i.e. the order might differ
+// across compilers (see https://en.cppreference.com/w/cpp/language/eval_order).
+//
+// In this example `CF_ORDERED_EVAL(get(), get(), get())` expands to:
+//
+// ```c++
+// [] {
+//   std::tuple<int, int, int> t;
+//   std::get<0>(t) = get();
+//   std::get<1>(t) = get();
+//   std::get<2>(t) = get();
+//   return t;
+// }()
+// ```
+#define CF_ORDERED_EVAL(...)                                                   \
+  [&] {                                                                        \
+    auto t = std::tuple<TYPEOF(__VA_ARGS__)>();                                \
+    ORDERED_EVAL_SELECT(__VA_ARGS__)(t, __VA_ARGS__) return t;                 \
+  }()
+
 namespace cryptofuzz {
 namespace util {
 
