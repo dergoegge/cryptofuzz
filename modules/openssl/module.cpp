@@ -3449,7 +3449,7 @@ std::optional<component::ECC_PublicKey> OpenSSL::OpECC_PrivateToPublic(operation
 
             /* Compute public key */
             CF_CHECK_NE(pub = std::make_unique<CF_EC_POINT>(ds, group, op.curveType.Get()), nullptr);
-            CF_CHECK_EQ(EC_POINT_mul(group->GetPtr(), pub->GetPtr(), prv.GetPtr(), nullptr, nullptr, nullptr), 1);
+            CF_CHECK_EQ(std::apply(EC_POINT_mul, CF_ORDERED_EVAL(group->GetPtr(), pub->GetPtr(), prv.GetPtr(), nullptr, nullptr, nullptr)), 1);
 
             CF_CHECK_EQ(pub_x.New(), true);
             CF_CHECK_EQ(pub_y.New(), true);
@@ -3516,7 +3516,7 @@ std::optional<component::ECC_KeyPair> OpenSSL::OpECC_GenerateKeyPair(operation::
             group->Lock();
             CF_CHECK_NE(group->GetPtr(), nullptr);
             CF_CHECK_NE(pub = std::make_unique<CF_EC_POINT>(ds, group, op.curveType.Get()), nullptr);
-            CF_CHECK_EQ(EC_POINT_mul(group->GetPtr(), pub->GetPtr(), priv, nullptr, nullptr, nullptr), 1);
+            CF_CHECK_EQ(std::apply(EC_POINT_mul, CF_ORDERED_EVAL(group->GetPtr(), pub->GetPtr(), priv, nullptr, nullptr, nullptr)), 1);
 
 #if !defined(CRYPTOFUZZ_BORINGSSL) && !defined(CRYPTOFUZZ_LIBRESSL) && !defined(CRYPTOFUZZ_OPENSSL_102) && !defined(CRYPTOFUZZ_OPENSSL_110) && !defined(CRYPTOFUZZ_OPENSSL_098)
             CF_CHECK_NE(EC_POINT_get_affine_coordinates(group->GetPtr(), pub->GetPtr(), pub_x, pub_y, nullptr), 0);
@@ -3653,7 +3653,7 @@ std::optional<component::ECDSA_Signature> OpenSSL::OpECDSA_Sign(operation::ECDSA
 
         /* Compute public key */
         CF_CHECK_NE(pub = std::make_unique<CF_EC_POINT>(ds, group, op.curveType.Get()), nullptr);
-        CF_CHECK_EQ(EC_POINT_mul(group->GetPtr(), pub->GetPtr(), prv.GetPtr(), nullptr, nullptr, nullptr), 1);
+        CF_CHECK_EQ(std::apply(EC_POINT_mul, CF_ORDERED_EVAL(group->GetPtr(), pub->GetPtr(), prv.GetPtr(), nullptr, nullptr, nullptr)), 1);
 
         CF_CHECK_EQ(pub_x.New(), true);
         CF_CHECK_EQ(pub_y.New(), true);
@@ -4291,12 +4291,12 @@ std::optional<component::ECC_Point> OpenSSL::OpECC_Point_Mul(operation::ECC_Poin
     }
 #endif
 
-    CF_CHECK_NE(EC_POINT_mul(group->GetPtr(), res->GetPtr(), nullptr, a->GetPtr(), b.GetPtr(), nullptr), 0);
+    CF_CHECK_NE(std::apply(EC_POINT_mul, CF_ORDERED_EVAL(group->GetPtr(), res->GetPtr(), nullptr, a->GetPtr(), b.GetPtr(), nullptr)), 0);
 
     if ( op.b.ToTrimmedString() == "0" ) {
         if ( !a->IsProjective() ) {
             CF_ASSERT(
-                    EC_POINT_is_at_infinity(group->GetPtr(), res->GetPtr()) == 1,
+                    std::apply(EC_POINT_is_at_infinity, CF_ORDERED_EVAL(group->GetPtr(), res->GetPtr())) == 1,
                     "Point multiplication by 0 does not yield point at infinity");
         }
     }
@@ -4307,9 +4307,9 @@ std::optional<component::ECC_Point> OpenSSL::OpECC_Point_Mul(operation::ECC_Poin
         if ( !a->IsProjective() ) {
             OpenSSL_bignum::BN_CTX ctx(ds);
 
-            if ( !EC_POINT_is_on_curve(group->GetPtr(), a->GetPtr(), ctx.GetPtr()) ) {
+            if ( !std::apply(EC_POINT_is_on_curve, CF_ORDERED_EVAL(group->GetPtr(), a->GetPtr(), ctx.GetPtr())) ) {
                 CF_ASSERT(
-                        EC_POINT_is_on_curve(group->GetPtr(), res->GetPtr(), ctx.GetPtr()) == 0,
+                        std::apply(EC_POINT_is_on_curve, CF_ORDERED_EVAL(group->GetPtr(), res->GetPtr(), ctx.GetPtr())) == 0,
                         "Point multiplication of invalid point yields valid point");
             }
         }
@@ -4318,7 +4318,7 @@ std::optional<component::ECC_Point> OpenSSL::OpECC_Point_Mul(operation::ECC_Poin
 
     if ( a->IsProjective() ) {
         OpenSSL_bignum::BN_CTX ctx(ds);
-        if ( !EC_POINT_is_on_curve(group->GetPtr(), a->GetPtr(), ctx.GetPtr()) ) {
+        if ( !std::apply(EC_POINT_is_on_curve, CF_ORDERED_EVAL(group->GetPtr(), a->GetPtr(), ctx.GetPtr())) ) {
             goto end;
         }
     }
